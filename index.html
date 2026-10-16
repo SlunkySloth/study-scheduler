@@ -1,0 +1,1103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231d3a8a'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%23ffd166' stroke-width='3'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%23ffd166'/%3E%3C/svg%3E">
+<title>Study Scheduler</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..900&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one column "flight deck": the NOW card dominates, today's checklist under it, tabs for the long-range plan. */
+:root{
+  --bg:#f2f4f8; --surface:#ffffff; --ink:#131925; --muted:#5b6578; --line:#dbe0ea;
+  --accent:#2b54d6; --accent-ink:#ffffff; --accent-soft:#e3e9fb;
+  --won:#1d8549; --won-soft:#dcf2e5; --warn:#a96300; --warn-soft:#fcefd8; --bad:#c0342c; --bad-soft:#fbe3e1;
+  --heat0:#e3e7ef; --heat1:#aec2f3; --heat2:#2b54d6;
+  --now-bg:#1d3a8a; --now-ink:#ffffff; --now-sub:#c9d5f7; --now-btn:#ffd166; --now-btn-ink:#1a1a1a;
+  --f-display:"Archivo","Arial Narrow",Arial,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0d1119; --surface:#151b26; --ink:#e7ebf3; --muted:#98a2b6; --line:#263044;
+  --accent:#7393f6; --accent-ink:#0a0f1d; --accent-soft:#1c2747;
+  --won:#4fc581; --won-soft:#113021; --warn:#e4a84c; --warn-soft:#38280f; --bad:#f1736a; --bad-soft:#3b1716;
+  --heat0:#1c2331; --heat1:#2d4282; --heat2:#7393f6;
+  --now-bg:#1b2a5c; --now-ink:#eef2ff; --now-sub:#aebbe6; --now-btn:#ffd166; --now-btn-ink:#151515; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d1119; --surface:#151b26; --ink:#e7ebf3; --muted:#98a2b6; --line:#263044;
+  --accent:#7393f6; --accent-ink:#0a0f1d; --accent-soft:#1c2747;
+  --won:#4fc581; --won-soft:#113021; --warn:#e4a84c; --warn-soft:#38280f; --bad:#f1736a; --bad-soft:#3b1716;
+  --heat0:#1c2331; --heat1:#2d4282; --heat2:#7393f6;
+  --now-bg:#1b2a5c; --now-ink:#eef2ff; --now-sub:#aebbe6; --now-btn:#ffd166; --now-btn-ink:#151515; color-scheme:dark}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:860px;margin:0 auto;padding-block:20px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:18px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0}
+h1{font-size:30px;font-weight:850;font-stretch:72%;letter-spacing:.01em;text-transform:uppercase;line-height:1}
+h2{font-size:21px;font-weight:800;font-stretch:80%}
+h3{font-size:16px;font-weight:700}
+.eyebrow{font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.muted{color:var(--muted)}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* header */
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px}
+.top .date{font-size:13px;color:var(--muted);margin-top:6px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:baseline;gap:6px;padding:6px 10px;border-radius:999px;background:var(--surface);border:1px solid var(--line);font-size:13px;white-space:nowrap}
+.chip b{font-family:var(--f-mono);font-size:14px}
+.chip.hot{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.chip.warn{background:var(--warn-soft);border-color:transparent;color:var(--warn)}
+
+/* now card */
+.now{background:var(--now-bg);color:var(--now-ink);border-radius:14px;padding:22px;display:grid;gap:14px}
+.now .eyebrow{color:var(--now-sub)}
+.now .btn:not(.ghost){background:var(--now-btn);color:var(--now-btn-ink)}
+.now h2{font-size:clamp(26px,6vw,40px);font-stretch:68%;font-weight:900;text-transform:uppercase;line-height:1.02}
+.now .why{font-size:14.5px;max-width:60ch;color:var(--now-sub)}
+.now .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.btn{border:0;border-radius:var(--r);padding:11px 18px;font-weight:600;background:var(--accent);color:var(--accent-ink)}
+.btn.big{padding:14px 24px;font-size:17px;font-family:var(--f-display);font-weight:800;letter-spacing:.03em;text-transform:uppercase;font-stretch:85%}
+.btn.ghost{background:transparent;color:inherit;border:1px solid currentColor;opacity:.85}
+.btn.small{padding:6px 12px;font-size:13px}
+.btn.plain{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+.btn:disabled{opacity:.45;cursor:default}
+
+/* checklist */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.panel-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.items{display:flex;flex-direction:column}
+.item{display:grid;grid-template-columns:30px 1fr auto;gap:12px;align-items:center;padding:11px 0;border-top:1px solid var(--line)}
+.item:first-child{border-top:0}
+.tick{width:26px;height:26px;border-radius:7px;border:2px solid var(--line);display:grid;place-items:center;background:transparent;padding:0}
+.tick svg{width:15px;height:15px;stroke:var(--accent-ink);stroke-width:3;fill:none;opacity:0}
+.item.done .tick{background:var(--won);border-color:var(--won)}
+.item.done .tick svg{opacity:1}
+.item.done .label{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1px}
+.item .label{font-weight:600}
+.item .sub{font-size:13px;color:var(--muted)}
+.counter{display:flex;align-items:center;gap:6px}
+.counter button{width:32px;height:32px;border-radius:8px;border:1px solid var(--line);background:var(--bg);font-weight:700}
+.counter .mono{min-width:46px;text-align:center;font-size:15px}
+.bar{height:6px;border-radius:99px;background:var(--heat0);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .3s}
+.won-banner{background:var(--won-soft);color:var(--won);border-radius:var(--r);padding:10px 14px;font-weight:600}
+.overdue{background:var(--bad-soft);color:var(--bad);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.overdue label{display:flex;gap:10px;align-items:flex-start;color:var(--ink);font-size:14px}
+.overdue input{margin-top:4px;accent-color:var(--won)}
+
+/* heatmap */
+.heat{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,1fr);gap:3px;overflow-x:auto;padding-bottom:2px}
+.heat span{width:14px;height:14px;border-radius:3px;background:var(--heat0)}
+.heat span.l1{background:var(--heat1)} .heat span.l2{background:var(--heat2)}
+.heat span.future{background:transparent;border:1px dashed var(--line)}
+.heat span.pre{opacity:.35}
+.heat span.today{outline:2px solid var(--ink);outline-offset:1px}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);align-items:center}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.stat{border:1px solid var(--line);border-radius:var(--r);padding:10px 12px}
+.stat b{display:block;font-family:var(--f-mono);font-size:22px;font-variant-numeric:tabular-nums}
+.stat span{font-size:12.5px;color:var(--muted)}
+
+/* tabs */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tab{background:none;border:0;padding:10px 14px;font-weight:600;color:var(--muted);border-bottom:3px solid transparent;white-space:nowrap}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+
+/* roadmap */
+details.phase{border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+details.phase+details.phase{margin-top:10px}
+details.phase summary{list-style:none;padding:14px 16px;display:grid;grid-template-columns:1fr auto;gap:4px 12px;cursor:pointer}
+details.phase summary::-webkit-details-marker{display:none}
+details.phase .meta{font-size:13px;color:var(--muted)}
+.pill{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:99px;letter-spacing:.03em;text-transform:uppercase}
+.pill.now{background:var(--accent);color:var(--accent-ink)}
+.pill.done{background:var(--won-soft);color:var(--won)}
+.pill.late{background:var(--bad-soft);color:var(--bad)}
+.pill.soon{background:var(--heat0);color:var(--muted)}
+.phase-body{padding:0 16px 14px;display:flex;flex-direction:column;gap:2px}
+.gate{font-size:13.5px;background:var(--accent-soft);border-radius:8px;padding:8px 10px;margin-bottom:6px}
+.task{display:grid;grid-template-columns:22px 1fr auto;gap:10px;align-items:start;padding:7px 0;border-top:1px solid var(--line);font-size:14.5px}
+.task:first-of-type{border-top:0}
+.task input{margin-top:4px;width:17px;height:17px;accent-color:var(--won)}
+.task.is-done span{color:var(--muted);text-decoration:line-through}
+.task .due{font-size:12.5px;white-space:nowrap}
+.task.late .due{color:var(--bad);font-weight:600}
+
+/* schedule */
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600}
+td.mono{white-space:nowrap}
+tr.is-now td{background:var(--accent-soft)}
+.dates{display:flex;flex-direction:column}
+.dateRow{display:grid;grid-template-columns:96px 1fr auto;gap:12px;padding:10px 0;border-top:1px solid var(--line);align-items:baseline}
+.dateRow:first-child{border-top:0}
+.dateRow.past{opacity:.5}
+.dateRow.next{background:var(--accent-soft);margin:0 -10px;padding:10px;border-radius:8px;border-top-color:transparent}
+.dateRow .k{font-size:12px}
+
+/* applications */
+form.add{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;align-items:end}
+form.add label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--muted);font-weight:600}
+input[type=text],input[type=url],input[type=date],select,textarea{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 10px;width:100%;min-width:0;color:var(--ink)}
+textarea{min-height:64px;resize:vertical}
+.applist td .co{font-weight:600}
+.applist select{padding:5px 6px;font-size:13px;width:auto}
+.tier{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.del{background:none;border:0;color:var(--muted);font-size:13px;text-decoration:underline}
+.del.armed{color:var(--bad);font-weight:600}
+
+/* focus overlay */
+.focus{position:fixed;inset:0;background:var(--now-bg);color:var(--now-ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:max(20px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(20px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));z-index:10;text-align:center}
+.focus .clock{font-family:var(--f-mono);font-size:clamp(64px,20vw,148px);font-weight:600;letter-spacing:-.02em;line-height:1}
+.focus .task-name{font-family:var(--f-display);font-weight:850;font-stretch:72%;text-transform:uppercase;font-size:clamp(22px,5vw,34px)}
+.focus .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.focus .rule{max-width:44ch;font-size:14px;opacity:.8}
+.toast{position:fixed;left:50%;bottom:max(18px,env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;z-index:20}
+.sync{font-size:12px;color:var(--muted)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
+/* streak freeze, levels, badges */
+.heat span.fz{background:transparent;border:2px solid var(--heat2)}
+.freeze{background:var(--accent-soft);border-radius:var(--r);padding:12px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;font-size:14px}
+.level{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.level b{font-family:var(--f-display);font-weight:850;font-stretch:75%;font-size:18px;text-transform:uppercase}
+.level .bar{flex:1;min-width:120px}
+.badges{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.badge{border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px;background:var(--surface)}
+.badge .medal{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-family:var(--f-display);font-weight:900;font-size:15px;background:var(--heat0);color:var(--muted)}
+.badge.got .medal{background:var(--now-btn);color:var(--now-btn-ink)}
+.badge.locked{opacity:.55}
+.badge b{font-size:14px}
+.badge span{font-size:12.5px;color:var(--muted)}
+/* AWS chart and weekly report */
+.chart svg{width:100%;height:auto;display:block}
+.chart text{fill:var(--muted);font-family:var(--f-mono);font-size:11px}
+.report{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.delta{font-size:12.5px;font-weight:600}
+.delta.up{color:var(--won)} .delta.down{color:var(--bad)} .delta.same{color:var(--muted)}
+.verdict{border-radius:var(--r);padding:12px 14px;font-weight:600}
+.verdict.up{background:var(--won-soft);color:var(--won)} .verdict.down{background:var(--bad-soft);color:var(--bad)} .verdict.same{background:var(--heat0);color:var(--ink)}
+/* pipeline board */
+.board{display:grid;grid-template-columns:repeat(5,minmax(170px,1fr));gap:10px;overflow-x:auto;padding-bottom:6px}
+.col{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;min-height:140px;min-width:0}
+.col.over{outline:2px dashed var(--accent)}
+.col h3{font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;display:flex;justify-content:space-between;gap:6px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 10px;font-size:13.5px;display:flex;flex-direction:column;gap:4px;cursor:grab;overflow-wrap:anywhere}
+.card .mv{display:flex;justify-content:space-between;gap:6px}
+.card .mv button{background:none;border:1px solid var(--line);border-radius:6px;padding:2px 8px;font-size:12px}
+.card .mv button:disabled{visibility:hidden}
+.promise{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;padding-bottom:14px;border-bottom:1px solid color-mix(in srgb,var(--now-sub) 35%,transparent)}
+.promise input{flex:1;min-width:200px;background:transparent;border:1px solid var(--now-sub);color:var(--now-ink);border-radius:8px;padding:9px 10px}
+.promise input::placeholder{color:var(--now-sub);opacity:.8}
+.promise .promise-text{font-size:16px}
+.now .btn.small{background:var(--now-btn);color:var(--now-btn-ink)}
+.now .btn.small.ghost{background:transparent;color:inherit}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{background:none;border:0;padding:6px 12px;font-size:13px;font-weight:600;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:30;padding:max(16px,env(safe-area-inset-left,0px))}
+.gate .box{max-width:420px;display:flex;flex-direction:column;gap:14px;text-align:center;align-items:center}
+.foot{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">Padmanaban's daily check-in</div>
+      <h1>Study Scheduler</h1>
+      <div class="date" id="today-date"></div>
+    </div>
+    <div class="chips" id="chips"></div>
+  </header>
+
+  <section class="now" id="now" aria-live="polite"></section>
+
+  <div class="grid2">
+    <section class="panel" id="checklist"></section>
+    <section class="panel" id="momentum"></section>
+  </div>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab" role="tab" data-tab="roadmap" id="tab-roadmap">Roadmap</button>
+    <button class="tab" role="tab" data-tab="schedule" id="tab-schedule">Schedule and dates</button>
+    <button class="tab" role="tab" data-tab="apps" id="tab-apps">Applications</button>
+    <button class="tab" role="tab" data-tab="aws" id="tab-aws">AWS exams</button>
+    <button class="tab" role="tab" data-tab="report" id="tab-report">Weekly report</button>
+    <button class="tab" role="tab" data-tab="badges" id="tab-badges">Badges</button>
+    <button class="tab" role="tab" data-tab="notes" id="tab-notes">Daily note</button>
+  </nav>
+  <section id="tabpanel"></section>
+  <div class="sync" id="sync">Connecting to your saved progress…</div>
+  <div class="foot">
+    <button class="btn small plain" id="export">Download backup</button>
+    <button class="btn small plain" id="import">Restore from backup</button>
+    <input type="file" id="importfile" accept="application/json" hidden>
+    <button class="btn small plain" id="signout" hidden>Sign out</button>
+  </div>
+</div>
+<div class="gate" id="gate" hidden><div class="box">
+  <h1>Study Scheduler</h1>
+  <p class="muted" id="gate-msg">Sign in to load your streaks, applications and progress.</p>
+  <button class="btn big" id="signin">Sign in with Google</button>
+</div></div>
+
+<div class="focus" id="focus" hidden></div>
+<div class="toast" id="toast" hidden></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { initializeFirestore, persistentLocalCache, doc as fdoc, collection as fcol, setDoc, onSnapshot as fsnap } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { firebaseConfig, ALLOWED_EMAIL } from "./firebase-config.js";
+
+/* ---------- the plan (dates are from your roadmap doc) ---------- */
+const AWS_EXAM = "2026-12-15";
+const PLAN_START = "2026-10-19";
+
+const PHASES = [
+  {id:"p0", name:"Phase 0: Reset", start:"2026-10-19", end:"2026-10-25", gate:"Every resume line marked green, yellow or red"},
+  {id:"p1", name:"Phase 1: Own PyRaft", start:"2026-10-26", end:"2026-11-22", gate:"Explain leader election and log replication with no notes"},
+  {id:"aws", name:"AWS track: Solutions Architect Associate", start:"2026-10-19", end:"2026-12-15", gate:"80%+ on 3 timed practice exams, then pass on Dec 15"},
+  {id:"p2", name:"Phase 2: Flash-sale system", start:"2026-11-23", end:"2027-02-28", gate:"Published load test: 1M purchase attempts, zero oversold"},
+  {id:"p3", name:"Phase 3: ML layer", start:"2027-03-01", end:"2027-04-18", gate:"Bot model serves under 20 ms p99, with an evaluation report"},
+  {id:"p4", name:"Phase 4: Interview mode", start:"2027-04-19", end:"2027-05-30", gate:"Pass 2 mock interviews a week for 3 weeks"},
+  {id:"p5", name:"Phase 5: Summer and next cycle", start:"2027-05-31", end:"2027-10-31", gate:"One offer, or 3 merged open-source PRs and a fresh application wave in August"},
+];
+
+const TASKS = [
+  ["p0","Mark every resume line green, yellow or red","2026-10-25"],
+  ["p0","Fix the employer name (Caprea vs Caprae) and pick one email for applications","2026-10-25"],
+  ["p0","Start NeetCode 150 (Arrays and Hashing)","2026-10-25"],
+  ["p0","Unsubscribe from irrelevant job alerts","2026-10-25"],
+  ["p1","Read the Raft paper; draw the follower, candidate, leader state machine","2026-11-01"],
+  ["p1","Rewrite leader election by hand, with tests for split votes","2026-11-08"],
+  ["p1","Rewrite log replication and commit rules; test a node killed mid-write","2026-11-15"],
+  ["p1","Partition tests, README with a diagram, 5-minute recorded walkthrough","2026-11-22"],
+  ["aws","Set an AWS Budgets alert at $5","2026-10-19"],
+  ["aws","Confirm and book the Dec 15 exam slot","2026-11-01"],
+  ["aws","IAM, VPC (subnets, NAT, security groups), EC2, S3","2026-11-01"],
+  ["aws","RDS, DynamoDB, ElastiCache, load balancers, Auto Scaling, Route 53, CloudFront","2026-11-15"],
+  ["aws","SQS, SNS, Kinesis, Lambda, CloudWatch, KMS, Well-Architected, cost","2026-11-29"],
+  ["aws","Timed practice exams: 80%+ on 3 of them","2026-12-13"],
+  ["aws","Exam day","2026-12-15"],
+  ["p2","One-server version; buying a ticket is a database transaction (weekends until Dec 15)","2026-12-20"],
+  ["p2","k6 load test baseline: requests/sec, p99 latency, oversold count","2026-12-27"],
+  ["p2","Break it with race conditions, then fix it; prove zero oversold","2027-01-03"],
+  ["p2","Redis for stock and caching; idempotency keys","2027-01-17"],
+  ["p2","A queue (Redis Streams or Kafka) to absorb spikes","2027-01-24"],
+  ["p2","Token-bucket rate limiter per user and IP","2027-01-31"],
+  ["p2","3 stateless instances behind nginx, then deploy on AWS; tear down after tests","2027-02-07"],
+  ["p2","Prometheus + Grafana; rerun the load test at 1M attempts","2027-02-14"],
+  ["p2","Design write-up with before/after numbers; add to resume","2027-02-28"],
+  ["p3","Logistic regression and gradient descent in NumPy, no libraries","2027-03-14"],
+  ["p3","Generate labelled bot and human traffic logs from the flagship","2027-03-21"],
+  ["p3","Features and a baseline model; report precision and recall","2027-03-28"],
+  ["p3","Gradient-boosted model, compared honestly against the baseline","2027-04-04"],
+  ["p3","Serve it in the request path within 20 ms; load test again","2027-04-11"],
+  ["p3","Evaluation report: real buyers blocked versus bots caught","2027-04-18"],
+  ["p4","Start 2 mock interviews a week","2027-04-25"],
+  ["p4","System design: URL shortener, rate limiter, news feed","2027-05-16"],
+  ["p4","ML interview basics: bias/variance, metrics, A/B testing the bot model","2027-05-23"],
+  ["p4","6 behavioral stories in STAR format","2027-05-30"],
+  ["p5","With an internship: ship something measurable, ask for a return offer","2027-08-15"],
+  ["p5","Without one: 3 merged open-source PRs plus off-cycle applications","2027-08-15"],
+  ["p5","Apply to Summer 2028 and new-grad roles in the first two weeks of August","2027-08-15"],
+].map(([phase,text,due],i)=>({id:"t"+i, phase, text, due}));
+
+const DATES = [
+  ["2026-10-19","Plan starts: Phase 0 and the AWS track","start"],
+  ["2026-10-25","Gate: resume audit done","gate"],
+  ["2026-10-26","Phase 1 starts: own PyRaft","start"],
+  ["2026-11-01","AWS exam slot booked","aws"],
+  ["2026-11-15","AWS: databases and scaling covered","aws"],
+  ["2026-11-22","Gate: explain Raft with no notes","gate"],
+  ["2026-11-23","Phase 2 starts (weekends only until the exam)","start"],
+  ["2026-11-29","AWS: messaging, Lambda and monitoring covered","aws"],
+  ["2026-12-13","AWS: 80%+ on 3 practice exams","aws"],
+  ["2026-12-15","AWS Solutions Architect Associate exam","aws"],
+  ["2026-12-20","Flagship weeks 1-2 done","gate"],
+  ["2027-02-28","Gate: flagship load test published","gate"],
+  ["2027-03-01","Phase 3 starts: ML layer","start"],
+  ["2027-04-18","Gate: bot model under 20 ms p99","gate"],
+  ["2027-04-19","Phase 4 starts: interview mode","start"],
+  ["2027-05-30","Gate: mock interviews passed","gate"],
+  ["2027-05-31","Phase 5: summer and next cycle","start"],
+  ["2027-08-01","Summer 2028 and new-grad applications open","apply"],
+];
+
+/* ---------- dates ---------- */
+const pad = n => String(n).padStart(2,"0");
+const keyOf = d => d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+const parseKey = k => { const [y,m,d] = k.split("-").map(Number); return new Date(y,m-1,d); };
+const addDays = (k,n) => { const d = parseKey(k); d.setDate(d.getDate()+n); return keyOf(d); };
+const daysBetween = (a,b) => Math.round((parseKey(b)-parseKey(a))/86400000);
+const todayKey = () => keyOf(new Date());
+const fmtDate = (k,opts={day:"numeric",month:"short"}) => parseKey(k).toLocaleDateString("en-IN",opts);
+const minsOf = t => { const [h,m] = t.split(":").map(Number); return h*60+m; };
+const fmt12 = t => { let [h,m] = t.split(":").map(Number); const ap = h>=12?"PM":"AM"; h = h%12||12; return h+":"+pad(m)+" "+ap; };
+
+/* Blocks for a given day, from the weekly schedule in your roadmap. */
+function blocksFor(k){
+  const dow = parseKey(k).getDay(); const aws = k <= AWS_EXAM;
+  if (dow === 0) return [
+    {key:"dsa", label:"LeetCode weekly contest", start:"08:00", end:"09:30"},
+    {key:"apps", label:"5 applications", start:"16:00", end:"17:00"},
+    {key:"review", label:"Weekly review", start:"17:00", end:"17:30"},
+  ];
+  if (dow === 6) return [
+    ...(aws ? [{key:"aws", label:"AWS hands-on labs", start:"09:00", end:"11:00"},
+               {key:"project", label:"Project deep work", start:"11:00", end:"13:00"}]
+            : [{key:"project", label:"Project deep work", start:"09:00", end:"13:00"}]),
+    {key:"apps", label:"5 applications + 2 problems", start:"15:00", end:"17:00"},
+  ];
+  return [
+    {key:"dsa", label:"DSA: solve by hand", start:"06:30", end:"07:30"},
+    {key:"apps", label:"5 tailored applications", start:"17:30", end:"18:30"},
+    ...(aws ? [{key:"aws", label:"AWS study", start:"20:00", end:"21:00"},
+               {key:"project", label:"Project: this week's checklist", start:"21:00", end:"22:00"}]
+            : [{key:"project", label:"Project: this week's checklist", start:"20:00", end:"22:00"}]),
+  ];
+}
+const WHY = {
+  dsa:"The coding round decides whether anyone reads your projects. One problem, by hand, no peeking for 30 minutes.",
+  apps:"Five today. Tailor three keywords from the posting and use the right resume (SDE or AIML).",
+  aws:"One focused hour. Do the lab, don't just watch the video.",
+  project:"Write it first, let AI review second. Never keep a line you can't explain.",
+  review:"Tick the week's boxes, check the gate, plan next week. 30 minutes.",
+};
+/* What has to be done for a day to count as won. */
+function requirements(k){
+  const dow = parseKey(k).getDay(); const keys = new Set(blocksFor(k).map(b=>b.key));
+  const out = [];
+  if (keys.has("dsa") || dow===6) out.push({key:"dsa", label: dow===0 ? "Contest or 1 problem" : "DSA problems", target: dow===6 ? 2 : 1, kind:"count"});
+  out.push({key:"apps", label:"Applications", target:5, kind:"apps"});
+  if (keys.has("aws")) out.push({key:"aws", label:"AWS study hour", kind:"toggle"});
+  if (keys.has("project")) out.push({key:"project", label:"Project block", kind:"toggle"});
+  if (keys.has("review")) out.push({key:"review", label:"Weekly review", kind:"toggle"});
+  return out;
+}
+
+/* ---------- state + storage ---------- */
+const S = { days:{}, tasks:{}, apps:{}, aws:[], jobs:{}, jobstate:{} };
+let db = null, live = false, loaded = false;
+const LKEY = "comeback-hq-local";
+function loadLocal(){ try { const j = JSON.parse(localStorage.getItem(LKEY)||"null"); if (j) Object.assign(S, j); } catch(e){} S.aws = S.aws || []; S.jobs = S.jobs || {}; S.jobstate = S.jobstate || {}; }
+function saveLocal(){ try { localStorage.setItem(LKEY, JSON.stringify(S)); } catch(e){} }
+
+const clone = o => JSON.parse(JSON.stringify(o||{}));
+const dayOf = k => S.days[k] || {dsa:0, done:{}, focus:0, note:""};
+function saveDay(k, d){
+  S.days[k] = d; render();
+  if (live) db.doc("days/"+k).set(d).catch(()=>toast("Could not save. Check your connection and try again.")); else saveLocal();
+}
+function saveTasks(){
+  render();
+  if (live) db.doc("meta/tasks").set({done:S.tasks}).catch(()=>toast("Could not save that tick.")); else saveLocal();
+}
+function saveApps(month){
+  render();
+  if (live) db.doc("apps/"+month).set({entries:S.apps[month]||[]}).catch(()=>toast("Could not save the application.")); else saveLocal();
+}
+function saveAws(){
+  render();
+  if (live) db.doc("aws/exams").set({entries:S.aws}).catch(()=>toast("Could not save the exam score.")); else saveLocal();
+}
+function setStatus(id, status){
+  for (const m in S.apps){ if ((S.apps[m]||[]).some(a=>a.id===id)){ S.apps[m] = S.apps[m].map(x=>x.id===id?{...x,status}:x); saveApps(m); toast(`Moved to ${status}.`); return; } }
+}
+function allApps(){ return Object.values(S.apps).flat().sort((a,b)=> (b.date||"").localeCompare(a.date||"") || (b.created||0)-(a.created||0)); }
+const appsOn = k => allApps().filter(a=>a.date===k).length;
+
+/* ---------- scoring ---------- */
+function progressOf(k){
+  const d = dayOf(k); const req = requirements(k);
+  const parts = req.map(r => r.kind==="count" ? Math.min(1,(d.dsa||0)/r.target)
+                         : r.kind==="apps" ? Math.min(1, appsOn(k)/r.target)
+                         : (d.done&&d.done[r.key]) ? 1 : 0);
+  const sum = parts.reduce((a,b)=>a+b,0);
+  return { ratio: req.length ? sum/req.length : 0, won: parts.every(p=>p>=1), any: sum>0 || (d.focus||0)>0 };
+}
+/* A frozen day keeps the streak alive. */
+const keeps = k => progressOf(k).won || !!dayOf(k).frozen;
+function streak(){
+  const t = todayKey(); let n = 0; let k = keeps(t) ? t : addDays(t,-1);
+  while (keeps(k)) { n++; k = addDays(k,-1); }
+  return n;
+}
+function bestStreak(){
+  const keys = Object.keys(S.days).sort(); if (!keys.length) return 0;
+  let best=0, run=0, k = keys[0]; const end = todayKey();
+  while (k <= end){ if (keeps(k)){ run++; best=Math.max(best,run);} else run=0; k = addDays(k,1); }
+  return best;
+}
+const wonDays = () => Object.keys(S.days).filter(k => k <= todayKey() && progressOf(k).won).length;
+/* One freeze earned per 7 won days, at most 3 banked. */
+function freezeInfo(){
+  const used = Object.values(S.days).filter(d=>d.frozen).length;
+  const earned = Math.floor(wonDays()/7);
+  return { earned, used, left: Math.max(0, Math.min(3, earned - used)) };
+}
+
+/* ---------- XP, levels, badges ---------- */
+const sumDays = f => Object.values(S.days).reduce((a,d)=>a+(d[f]||0),0);
+function xp(){
+  return allApps().length*5 + sumDays("dsa")*10 + sumDays("focus") + Object.keys(S.tasks).length*25 + wonDays()*20 + S.aws.length*15;
+}
+const LEVEL_NAMES = ["Starter","Grinder","Builder","Shipper","Engineer","Architect","Contender","Offer-ready"];
+function levelOf(x){
+  let lvl = 1, need = 100, acc = 0;
+  while (x >= acc + need){ acc += need; lvl++; need = Math.round(need*1.35); }
+  return { lvl, into: x-acc, need, name: LEVEL_NAMES[Math.min(lvl-1, LEVEL_NAMES.length-1)] };
+}
+function badgeList(){
+  const apps = allApps(), solved = sumDays("dsa"), focusH = sumDays("focus")/60, best = bestStreak(), ex = S.aws;
+  const phaseDone = id => TASKS.filter(x=>x.phase===id).every(x=>S.tasks[x.id]);
+  return [
+    ["First day won","Win one full day", wonDays()>=1],
+    ["One week strong","Reach a 7-day streak", best>=7],
+    ["Unbreakable","Reach a 30-day streak", best>=30],
+    ["Shots fired","Log 10 applications", apps.length>=10],
+    ["Volume","Log 50 applications", apps.length>=50],
+    ["Relentless","Log 150 applications", apps.length>=150],
+    ["Warmed up","Solve 25 problems by hand", solved>=25],
+    ["Pattern spotter","Solve 100 problems", solved>=100],
+    ["Interview-ready","Solve 300 problems", solved>=300],
+    ["Deep work","10 focused hours", focusH>=10],
+    ["Monk mode","50 focused hours", focusH>=50],
+    ["First mock","Log an AWS practice exam", ex.length>=1],
+    ["80% club","Score 80%+ on a practice exam", ex.some(e=>e.score>=80)],
+    ["Exam-ready","3 practice exams at 80%+", ex.filter(e=>e.score>=80).length>=3],
+    ["Raft owner","Finish Phase 1", phaseDone("p1")],
+    ["Certified track","Finish the AWS track", phaseDone("aws")],
+    ["Scale survivor","Finish the flash-sale system", phaseDone("p2")],
+    ["Model in prod","Finish the ML layer", phaseDone("p3")],
+    ["Foot in the door","Reach an interview", apps.some(a=>a.status==="Interview"||a.status==="Offer")],
+    ["Offer!","Get an offer", apps.some(a=>a.status==="Offer")],
+  ].map(([name,how,got])=>({id:name, name, how, got}));
+}
+function checkBadges(){
+  if (!loaded) return;
+  const got = badgeList().filter(b=>b.got).map(b=>b.id);
+  let seen = null; try { seen = JSON.parse(localStorage.getItem("comeback-badges")||"null"); } catch(e){}
+  if (seen){ const fresh = got.filter(id=>!seen.includes(id)); if (fresh.length) toast("Badge unlocked: " + fresh.join(", ")); }
+  try { localStorage.setItem("comeback-badges", JSON.stringify(got)); } catch(e){}
+}
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s??"").replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let toastTimer;
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.hidden=false; clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.hidden=true,2600); }
+const TICK = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3.2 3L13 4.5"/></svg>';
+function currentPhase(k){ return PHASES.filter(p=>p.id!=="aws" && k>=p.start && k<=p.end)[0] || (k < PLAN_START ? PHASES[0] : null); }
+
+/* ---------- render: header ---------- */
+function renderHeader(){
+  const t = todayKey();
+  $("#today-date").textContent = parseKey(t).toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  const chips = [];
+  const s = streak();
+  chips.push(`<span class="chip ${s>0?"hot":""}"><b>${s}</b> day streak</span>`);
+  const awsLeft = daysBetween(t, AWS_EXAM);
+  if (awsLeft >= 0) chips.push(`<span class="chip ${awsLeft<=21?"warn":""}">AWS exam in <b>${awsLeft}</b> days</span>`);
+  const nextGate = DATES.find(d => d[2]==="gate" && d[0] >= t);
+  if (nextGate) chips.push(`<span class="chip">Next gate in <b>${daysBetween(t,nextGate[0])}</b> days</span>`);
+  $("#chips").innerHTML = chips.join("");
+}
+
+/* ---------- render: NOW card ---------- */
+function isDone(k, key){
+  const d = dayOf(k);
+  if (key==="dsa") { const r = requirements(k).find(r=>r.key==="dsa"); return (d.dsa||0) >= (r?r.target:1); }
+  if (key==="apps") return appsOn(k) >= 5;
+  return !!(d.done && d.done[key]);
+}
+/* Missed-block rescue: a moved block keeps its key but gets a new time (max 60 min). */
+const toHHMM = mm => pad(Math.floor(mm/60)) + ":" + pad(mm%60);
+function effBlocks(k){
+  const r = dayOf(k).rescue || {};
+  return blocksFor(k).map(b => { if (!r[b.key]) return b;
+    const dur = Math.min(60, minsOf(b.end)-minsOf(b.start));
+    return {...b, start:r[b.key], end:toHHMM(minsOf(r[b.key])+dur), rescued:true}; })
+    .sort((a,b)=>minsOf(a.start)-minsOf(b.start));
+}
+function findSlot(k, block, m){
+  const dur = Math.min(60, minsOf(block.end)-minsOf(block.start));
+  const busy = effBlocks(k).filter(b => b.key!==block.key && !isDone(k,b.key) && minsOf(b.end) > m);
+  for (let s = Math.ceil((m+5)/30)*30; s + dur <= 23*60; s += 30){
+    if (!busy.some(b => s < minsOf(b.end) && s+dur > minsOf(b.start))) return toHHMM(s);
+  }
+  return null;
+}
+/* Morning promise: one thing you commit to finishing today. */
+function promiseHtml(t, m){
+  const d = dayOf(t);
+  if (!d.commit) return `<form class="promise" id="promiseform"><label for="promise-in" class="eyebrow" style="flex-basis:100%">Before you start: what's the one thing you'll finish today?</label>
+    <input type="text" id="promise-in" placeholder="e.g. Rewrite leader election and pass the split-vote test" maxlength="140"><button class="btn small" type="submit">Promise it</button></form>`;
+  const state = d.commitDone===true ? `<span class="pill done">Kept</span>` : d.commitDone===false ? `<span class="pill late">Not today</span>` : "";
+  const ask = d.commitDone==null ? (m >= 21*60
+      ? `<span class="eyebrow">Did you keep it?</span><button class="btn small" data-commit="yes">Yes</button><button class="btn small ghost" data-commit="no">Not today</button>`
+      : `<button class="btn small ghost" data-commit="yes">Mark kept</button>`) : "";
+  return `<div class="promise"><span class="eyebrow" style="flex-basis:100%">Today's promise</span><b class="promise-text">${esc(d.commit)}</b>${state}${ask}</div>`;
+}
+function renderNow(){
+  const t = todayKey(); const now = new Date(); const m = now.getHours()*60+now.getMinutes();
+  const blocks = effBlocks(t);
+  const cur = blocks.find(b => m >= minsOf(b.start) && m < minsOf(b.end));
+  const open = blocks.filter(b => !isDone(t,b.key));
+  const next = blocks.find(b => minsOf(b.start) > m && !isDone(t,b.key));
+  let eyebrow, title, why, primary, secondary = "";
+  if (cur && !isDone(t,cur.key)) {
+    eyebrow = `Right now · ${fmt12(cur.start)} to ${fmt12(cur.end)}`;
+    title = cur.label; why = WHY[cur.key];
+    const left = minsOf(cur.end) - m;
+    primary = `<button class="btn big" data-start="${cur.key}" data-min="${Math.max(10,left)}">Start: ${left} min left in this block</button>`;
+    secondary = `<button class="btn ghost" data-start="${cur.key}" data-min="5">Just 5 minutes</button>`;
+  } else if (open.length) {
+    const target = next || open[0];
+    const lateOnes = open.filter(b => minsOf(b.end) <= m);
+    eyebrow = next && !lateOnes.length ? `Next up at ${fmt12(next.start)}` : "Still open today";
+    title = (lateOnes[0] || target).label; why = WHY[(lateOnes[0] || target).key];
+    if (lateOnes.length && next) why = `${lateOnes.map(b=>b.label).join(", ")} slipped. Do one of them now, before ${fmt12(next.start)}.`;
+    const pick = lateOnes[0] || target;
+    primary = `<button class="btn big" data-start="${pick.key}" data-min="25">Start 25 minutes: ${esc(pick.label)}</button>`;
+    secondary = `<button class="btn ghost" data-start="${pick.key}" data-min="5">Just 5 minutes</button>`;
+    if (lateOnes.length){ const slot = findSlot(t, pick, m);
+      if (slot) secondary += `<button class="btn ghost" data-rescue="${pick.key}" data-at="${slot}">Move it to ${fmt12(slot)}</button>`; }
+  } else {
+    eyebrow = "Today is done"; title = "Day won. Rest properly.";
+    why = "Every block is ticked. Tomorrow's first block is the one that keeps the streak alive.";
+    primary = "";
+  }
+  const focusToday = dayOf(t).focus||0;
+  $("#now").innerHTML = promiseHtml(t, m) + `
+    <div class="eyebrow">${esc(eyebrow)}</div>
+    <h2>${esc(title)}</h2>
+    <div class="why">${esc(why)}</div>
+    <div class="row">${primary}${secondary}</div>
+    <div class="eyebrow">Focused today: <span class="mono">${focusToday}</span> min</div>`;
+}
+
+/* ---------- render: today's checklist ---------- */
+function renderChecklist(){
+  const t = todayKey(); const d = dayOf(t); const req = requirements(t); const p = progressOf(t);
+  const rows = req.map(r => {
+    if (r.kind==="count") {
+      const n = d.dsa||0; const done = n >= r.target;
+      return `<div class="item ${done?"done":""}"><button class="tick" data-dsa-tick aria-label="Add one problem">${TICK}</button>
+        <div><div class="label">${esc(r.label)}</div><div class="sub">Target ${r.target}. Solved by hand counts; copied doesn't.</div></div>
+        <div class="counter"><button data-dsa="-1" aria-label="One fewer">−</button><span class="mono">${n}/${r.target}</span><button data-dsa="1" aria-label="One more">+</button></div></div>`;
+    }
+    if (r.kind==="apps") {
+      const n = appsOn(t); const done = n >= 5;
+      return `<div class="item ${done?"done":""}"><button class="tick" data-goto="apps" aria-label="Log an application">${TICK}</button>
+        <div><div class="label">${n} of 5 applications</div>${openJobs().length?`<div class="sub">${openJobs().length} new jobs waiting in Applications</div>`:""}<div class="bar"><i style="width:${Math.min(100,n*20)}%"></i></div></div>
+        <button class="btn small plain" data-goto="apps">Log one</button></div>`;
+    }
+    const done = !!(d.done&&d.done[r.key]);
+    return `<div class="item ${done?"done":""}"><button class="tick" data-toggle="${r.key}" aria-pressed="${done}" aria-label="Mark ${esc(r.label)} done">${TICK}</button>
+      <div><div class="label">${esc(r.label)}</div><div class="sub">${esc(effBlocks(t).filter(b=>b.key===r.key).map(b=>fmt12(b.start)+" to "+fmt12(b.end)).join(", "))}</div></div>
+      ${done?"":`<button class="btn small plain" data-start="${r.key}" data-min="25">Start</button>`}</div>`;
+  }).join("");
+  const late = TASKS.filter(x => x.due < t && !S.tasks[x.id]).slice(0,3);
+  const overdue = late.length ? `<div class="overdue"><b>Overdue from your roadmap</b>${late.map(x=>`<label><input type="checkbox" data-task="${x.id}"> <span>${esc(x.text)} <span class="mono">(due ${fmtDate(x.due)})</span></span></label>`).join("")}</div>` : "";
+  const y = addDays(t,-1), fi = freezeInfo();
+  const prevRun = (() => { let n=0, k=addDays(y,-1); while (keeps(k)) { n++; k=addDays(k,-1); } return n; })();
+  const freeze = (!keeps(y) && prevRun>0) ? (fi.left>0
+    ? `<div class="freeze"><span>You missed yesterday. Use a streak freeze to keep your ${prevRun}-day streak (${fi.left} left).</span><button class="btn small" data-freeze="${y}">Use a freeze</button></div>`
+    : `<div class="freeze"><span>Yesterday broke your ${prevRun}-day streak. Win today to start a new one. You earn a freeze every 7 won days.</span></div>`) : "";
+  $("#checklist").innerHTML = `
+    <div class="panel-head"><h2>Today</h2><span class="mono muted">${Math.round(p.ratio*100)}%</span></div>
+    ${p.won ? `<div class="won-banner">Day won. Your streak is safe.</div>` : ""}${freeze}
+    <div class="items">${rows}</div>${overdue}`;
+}
+
+/* ---------- render: momentum (heatmap + stats) ---------- */
+function renderMomentum(){
+  const t = todayKey(); const weeks = 18;
+  const d0 = parseKey(t); const startK = addDays(t, -(d0.getDay()) - (weeks-1)*7);
+  let cells = "";
+  for (let i=0;i<weeks*7;i++){
+    const k = addDays(startK,i);
+    if (k > t) { cells += `<span class="future" title="${fmtDate(k)}"></span>`; continue; }
+    const p = progressOf(k); const fz = !p.won && dayOf(k).frozen; const lvl = p.won ? "l2" : fz ? "fz" : p.any ? "l1" : "";
+    cells += `<span class="${lvl} ${k<PLAN_START?"pre":""} ${k===t?"today":""}" title="${fmtDate(k)}: ${p.won?"won":fz?"streak freeze":p.any?"partial":"nothing logged"}"></span>`;
+  }
+  const apps = allApps(); const weekStart = addDays(t, -((d0.getDay()+6)%7));
+  const appsWeek = apps.filter(a => a.date >= weekStart && a.date <= t).length;
+  const solved = Object.values(S.days).reduce((a,d)=>a+(d.dsa||0),0);
+  const focus = Object.values(S.days).reduce((a,d)=>a+(d.focus||0),0);
+  const done = Object.keys(S.tasks).length;
+  const L = levelOf(xp()); const fi = freezeInfo();
+  $("#momentum").innerHTML = `
+    <div class="panel-head"><h2>Momentum</h2><span class="muted" style="font-size:13px">Best streak <span class="mono">${bestStreak()}</span> · Freezes <span class="mono">${fi.left}</span></span></div>
+    <div class="level"><b>Level ${L.lvl} · ${L.name}</b><div class="bar"><i style="width:${Math.round(L.into/L.need*100)}%"></i></div><span class="mono muted" style="font-size:12.5px">${L.into}/${L.need} XP</span></div>
+    <div class="heat" aria-label="Last 18 weeks">${cells}</div>
+    <div class="legend"><span><i style="background:var(--heat0)"></i>nothing</span><span><i style="background:var(--heat1)"></i>partial</span><span><i style="background:var(--heat2)"></i>day won</span><span><i style="border:2px solid var(--heat2)"></i>freeze</span></div>
+    <div class="stats">
+      <div class="stat"><b>${appsWeek}/35</b><span>applications this week</span></div>
+      <div class="stat"><b>${solved}</b><span>problems solved</span></div>
+      <div class="stat"><b>${Math.round(focus/60*10)/10}h</b><span>focused time</span></div>
+      <div class="stat"><b>${done}/${TASKS.length}</b><span>roadmap tasks</span></div>
+    </div>`;
+}
+
+/* ---------- tabs ---------- */
+let tab = "roadmap";
+try { tab = localStorage.getItem("comeback-tab") || "roadmap"; } catch(e){}
+function renderTabs(){
+  document.querySelectorAll(".tab").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab===tab)));
+  const fn = {roadmap:renderRoadmap, schedule:renderSchedule, apps:renderApps, aws:renderAws, report:renderReport, badges:renderBadges, notes:renderNotes}[tab] || renderRoadmap;
+  fn();
+}
+
+function renderRoadmap(){
+  const t = todayKey(); const cur = currentPhase(t);
+  $("#tabpanel").innerHTML = PHASES.map(p => {
+    const ts = TASKS.filter(x=>x.phase===p.id); const n = ts.filter(x=>S.tasks[x.id]).length;
+    const lateN = ts.filter(x=>x.due < t && !S.tasks[x.id]).length;
+    const state = n===ts.length ? `<span class="pill done">Done</span>` : lateN ? `<span class="pill late">${lateN} overdue</span>`
+                : (t>=p.start && t<=p.end) || (cur && cur.id===p.id) ? `<span class="pill now">Now</span>` : `<span class="pill soon">${t<p.start?"Starts "+fmtDate(p.start):"Ended"}</span>`;
+    const open = (cur && cur.id===p.id) || (p.id==="aws" && t<=AWS_EXAM) || lateN>0;
+    return `<details class="phase" ${open?"open":""}>
+      <summary><h3>${esc(p.name)}</h3>${state}
+        <span class="meta">${fmtDate(p.start)} to ${fmtDate(p.end,{day:"numeric",month:"short",year:"numeric"})} · ${n}/${ts.length} done</span><span></span></summary>
+      <div class="phase-body"><div class="gate"><b>Gate:</b> ${esc(p.gate)}</div>
+        ${ts.map(x => { const done=!!S.tasks[x.id]; const late=!done && x.due<t;
+          return `<label class="task ${done?"is-done":""} ${late?"late":""}"><input type="checkbox" data-task="${x.id}" ${done?"checked":""}><span>${esc(x.text)}</span><span class="due mono">${fmtDate(x.due)}</span></label>`; }).join("")}
+      </div></details>`;
+  }).join("");
+}
+
+function renderSchedule(){
+  const t = todayKey(); const now = new Date(); const m = now.getHours()*60+now.getMinutes();
+  const today = effBlocks(t);
+  const mode = t <= AWS_EXAM ? "Until the AWS exam (Dec 15)" : "After the AWS exam";
+  const sample = t <= AWS_EXAM ? "2026-12-07" : "2027-01-04";
+  const rowsFor = (label, k) => blocksFor(k).map(b=>`<tr><td>${label}</td><td class="mono">${fmt12(b.start)} to ${fmt12(b.end)}</td><td>${esc(b.label)}</td></tr>`).join("");
+  const nextIdx = DATES.findIndex(d=>d[0]>=t);
+  $("#tabpanel").innerHTML = `
+  <div class="grid2">
+    <div class="panel"><div class="panel-head"><h2>Today's blocks</h2><span class="muted" style="font-size:13px">${esc(mode)}</span></div>
+      <div class="tbl-wrap"><table><thead><tr><th>Time</th><th>Block</th><th>Status</th></tr></thead><tbody>
+      ${today.map(b=>{ const isNow = m>=minsOf(b.start)&&m<minsOf(b.end); const done=isDone(t,b.key);
+        return `<tr class="${isNow?"is-now":""}"><td class="mono">${fmt12(b.start)}</td><td>${esc(b.label)}</td><td>${done?'<span class="pill done">Done</span>':isNow?'<span class="pill now">Now</span>':m>=minsOf(b.end)?'<span class="pill late">Missed</span>':'<span class="pill soon">Later</span>'}</td></tr>`; }).join("")}
+      </tbody></table></div>
+      <h3>Every week</h3>
+      <div class="tbl-wrap"><table><thead><tr><th>Day</th><th>Time</th><th>What</th></tr></thead><tbody>
+        ${rowsFor("Mon to Fri", sample)}${rowsFor("Saturday", addDays(sample,5))}${rowsFor("Sunday", addDays(sample,6))}
+      </tbody></table></div>
+    </div>
+    <div class="panel"><div class="panel-head"><h2>Key dates</h2><span class="muted" style="font-size:13px">${DATES.length} dates</span></div>
+      <div class="dates">${DATES.map((d,i)=>{ const left = daysBetween(t,d[0]);
+        return `<div class="dateRow ${d[0]<t?"past":""} ${i===nextIdx?"next":""}"><span class="mono">${fmtDate(d[0],{day:"numeric",month:"short",year:"2-digit"})}</span><span>${esc(d[1])}<br><span class="k muted">${d[2]==="gate"?"Gate":d[2]==="aws"?"AWS":d[2]==="apply"?"Applications":"Phase start"}</span></span><span class="mono muted">${left<0?"done":left===0?"today":left+"d"}</span></div>`; }).join("")}
+      </div>
+    </div>
+  </div>`;
+}
+
+let armedDelete = null;
+function renderApps(){
+  const t = todayKey(); const apps = allApps(); const n = appsOn(t);
+  const counts = {}; apps.forEach(a => counts[a.status] = (counts[a.status]||0)+1);
+  const statuses = ["Applied","Referral asked","Interview","Offer","Rejected"];
+  $("#tabpanel").innerHTML = jobsHtml() + `
+  <div class="panel" style="margin-top:18px">
+    <div class="panel-head"><h2>Log an application</h2><span class="mono">${n}/5 today</span></div>
+    <form class="add" id="appform">
+      <label for="f-co">Company<input type="text" id="f-co" required placeholder="e.g. Atlassian"></label>
+      <label for="f-role">Role<input type="text" id="f-role" required placeholder="e.g. SDE Intern 2027"></label>
+      <label for="f-tier">Tier<select id="f-tier"><option>Dream</option><option selected>Target</option><option>Safety</option></select></label>
+      <label for="f-res">Resume used<select id="f-res"><option>SDE</option><option>AIML</option></select></label>
+      <label for="f-link">Link (optional)<input type="url" id="f-link" placeholder="https://"></label>
+      <label for="f-date">Date<input type="date" id="f-date" value="${t}"></label>
+      <button class="btn" type="submit">Add application</button>
+    </form>
+    <div class="panel-head"><div class="legend">${statuses.map(s=>`<span>${s}: <b class="mono">${counts[s]||0}</b></span>`).join("")}<span>Total: <b class="mono">${apps.length}</b></span></div>
+      <div class="seg" role="group" aria-label="View"><button data-view="board" aria-pressed="${appView==="board"}">Board</button><button data-view="list" aria-pressed="${appView!=="board"}">List</button></div></div>
+    ${appView==="board" ? boardHtml(apps, statuses) : `<div class="tbl-wrap"><table class="applist"><thead><tr><th>Date</th><th>Company and role</th><th>Status</th><th></th></tr></thead><tbody>
+      ${apps.length ? apps.map(a=>`<tr><td class="mono">${fmtDate(a.date)}</td>
+        <td><div class="co">${a.link?`<a href="${esc(a.link)}" target="_blank" rel="noopener">${esc(a.company)}</a>`:esc(a.company)}</div><div>${esc(a.role)}</div><div class="tier">${esc(a.tier||"")}${a.resume?" · "+esc(a.resume)+" resume":""}${a.note?" · "+esc(a.note):""}</div></td>
+        <td><select data-status="${esc(a.id)}" aria-label="Status for ${esc(a.company)}">${statuses.map(s=>`<option ${a.status===s?"selected":""}>${s}</option>`).join("")}</select></td>
+        <td><button class="del ${armedDelete===a.id?"armed":""}" data-del="${esc(a.id)}">${armedDelete===a.id?"Tap again to delete":"Delete"}</button></td></tr>`).join("")
+      : `<tr><td colspan="4" class="muted">No applications logged yet. Add your first one above; it fills today's 5.</td></tr>`}
+    </tbody></table></div>`}
+  </div>`;
+}
+let appView = "board";
+try { appView = localStorage.getItem("comeback-appview") || "board"; } catch(e){}
+function boardHtml(apps, statuses){
+  return `<div class="board">${statuses.map((s,si)=>{ const col = apps.filter(a=>(a.status||"Applied")===s);
+    return `<div class="col" data-col="${s}"><h3><span>${s}</span><span class="mono muted">${col.length}</span></h3>
+      ${col.map(a=>`<div class="card" draggable="true" data-card="${esc(a.id)}">
+        <b>${a.link?`<a href="${esc(a.link)}" target="_blank" rel="noopener">${esc(a.company)}</a>`:esc(a.company)}</b>
+        <span>${esc(a.role)}</span><span class="tier">${fmtDate(a.date)} · ${esc(a.tier||"")}</span>
+        <div class="mv"><button data-move="${esc(a.id)}" data-to="${statuses[si-1]||""}" ${si===0?"disabled":""} aria-label="Move back">←</button><button data-move="${esc(a.id)}" data-to="${statuses[si+1]||""}" ${si===statuses.length-1?"disabled":""} aria-label="Move forward">→</button></div>
+      </div>`).join("")}</div>`; }).join("")}</div>`;
+}
+/* Jobs found by the morning Job Watcher, waiting for a decision. */
+let showAllJobs = false;
+function openJobs(){
+  return Object.entries(S.jobs).flatMap(([day,list]) => (list||[]).map(j=>({...j, day})))
+    .filter((j, i, all) => !S.jobstate[j.id] && all.findIndex(x => x.id === j.id) === i)
+    .sort((a,b)=> (b.india?1:0)-(a.india?1:0) || b.day.localeCompare(a.day) || a.company.localeCompare(b.company));
+}
+function jobsHtml(){
+  const js = openJobs(); const ml = mailLine() ? `<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">${mailLine()}</div>` : "";
+  if (!js.length) return `<div class="panel"><div class="panel-head"><h2>New jobs</h2></div><p class="muted" style="margin:0">No new jobs waiting. The Job Watcher adds new ones every morning at 7:45 AM.</p>${ml}</div>`;
+  const shown = showAllJobs ? js : js.slice(0,8);
+  return `<div class="panel"><div class="panel-head"><h2>New jobs: apply to these</h2><span class="mono muted">${js.length} waiting</span></div>${ml}
+    <div class="items">${shown.map(j=>`<div class="item"><span class="pill ${j.india?"done":"soon"}" style="justify-self:start">${j.india?"India":esc(j.company.slice(0,4))}</span>
+      <div style="min-width:0"><div class="label"><a href="${esc(j.url)}" target="_blank" rel="noopener">${esc(j.title)}</a></div><div class="sub">${esc(j.company)} · ${esc(j.location)}${j.posted?" · "+esc(j.posted):""}</div></div>
+      <div class="row" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><button class="btn small" data-job-apply="${esc(j.id)}">I applied</button><button class="btn small plain" data-job-skip="${esc(j.id)}">Not for me</button></div></div>`).join("")}</div>
+    ${js.length>8?`<button class="btn small plain" data-jobs-all>${showAllJobs?"Show fewer":"Show all "+js.length}</button>`:""}</div>`;
+}
+/* New jobs: jobs.json is pushed to this site by the Job Watcher every morning. */
+let mailState = "idle";
+async function loadJobsFile(fromClick){
+  mailState = "loading"; if (tab==="apps") renderTabs();
+  try {
+    const r = await fetch("jobs.json?t=" + Date.now(), {cache:"no-store"});
+    if (!r.ok) throw new Error(String(r.status));
+    const j = await r.json();
+    S.jobs = (j && typeof j.days === "object") ? j.days : {};
+    mailState = "ok";
+  } catch(e){ mailState = "error"; }
+  render();
+  if (fromClick && mailState==="ok") toast("Job list is up to date.");
+}
+function mailLine(){
+  const btn = label => `<button class="btn small plain" data-loadmail>${label}</button>`;
+  return ({ idle:"", loading:`<span class="muted" style="font-size:13px">Loading jobs…</span>`,
+    ok: btn("Refresh jobs"), error:`<span class="muted" style="font-size:13px">Couldn't load the job list.</span>${btn("Try again")}` })[mailState] || "";
+}
+function saveJobState(){
+  render();
+  if (live) db.doc("meta/jobstate").set({done:S.jobstate}).catch(()=>toast("Could not save that.")); else saveLocal();
+}
+
+let awsArmed = null;
+function renderAws(){
+  const t = todayKey(); const ex = [...S.aws].sort((a,b)=>a.date.localeCompare(b.date) || (a.created||0)-(b.created||0));
+  const passing = ex.filter(e=>e.score>=80).length; const left = daysBetween(t, AWS_EXAM);
+  let chart = `<p class="muted">No practice exams yet. Timed practice starts Nov 30; log every attempt here, even bad ones.</p>`;
+  if (ex.length){
+    const W=640, H=240, L=40, R=16, T=16, B=30;
+    const x0 = [ex[0].date, PLAN_START].sort()[0], x1 = [ex[ex.length-1].date, AWS_EXAM].sort().reverse()[0];
+    const span = Math.max(1, daysBetween(x0,x1));
+    const lo = Math.min(40, ...ex.map(e=>e.score)) >= 40 ? 40 : 0;
+    const X = k => L + (W-L-R)*daysBetween(x0,k)/span, Y = v => T + (H-T-B)*(1-(v-lo)/(100-lo));
+    const ticks = []; for (let v=lo; v<=100; v+=lo===40?20:25) ticks.push(v);
+    const pts = ex.map(e=>`${X(e.date).toFixed(1)},${Y(e.score).toFixed(1)}`).join(" ");
+    chart = `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Practice exam scores over time">
+      ${ticks.map(v=>`<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-width="1"/><text x="${L-6}" y="${Y(v)+4}" text-anchor="end">${v}%</text>`).join("")}
+      <line x1="${L}" x2="${W-R}" y1="${Y(80)}" y2="${Y(80)}" stroke="var(--won)" stroke-width="1.5" stroke-dasharray="5 4"/>
+      <text x="${W-R}" y="${Y(80)-6}" text-anchor="end" style="fill:var(--won)">80% target</text>
+      <line x1="${X(AWS_EXAM)}" x2="${X(AWS_EXAM)}" y1="${T}" y2="${H-B}" stroke="var(--bad)" stroke-width="1.5"/>
+      <text x="${X(AWS_EXAM)-4}" y="${H-B+18}" text-anchor="end" style="fill:var(--bad)">Exam ${fmtDate(AWS_EXAM)}</text>
+      <text x="${L}" y="${H-B+18}">${fmtDate(x0)}</text>
+      <polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round"/>
+      ${ex.map((e,i)=>`<circle cx="${X(e.date)}" cy="${Y(e.score)}" r="${i===ex.length-1?5.5:4}" fill="${e.score>=80?"var(--won)":"var(--accent)"}" stroke="var(--surface)" stroke-width="2"><title>${fmtDate(e.date)}: ${e.score}%</title></circle>`).join("")}
+    </svg></div>`;
+  }
+  $("#tabpanel").innerHTML = `
+  <div class="panel">
+    <div class="panel-head"><h2>AWS practice exams</h2><span class="mono">${passing}/3 at 80%+ · exam in ${Math.max(0,left)}d</span></div>
+    ${chart}
+    <form class="add" id="awsform">
+      <label for="aw-date">Date<input type="date" id="aw-date" value="${t}"></label>
+      <label for="aw-score">Score (%)<input type="text" inputmode="numeric" id="aw-score" required placeholder="e.g. 72"></label>
+      <label for="aw-src">Which exam<input type="text" id="aw-src" placeholder="e.g. Practice set 1"></label>
+      <button class="btn" type="submit">Log score</button>
+    </form>
+    ${ex.length ? `<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Exam</th><th>Score</th><th></th></tr></thead><tbody>
+      ${[...ex].reverse().map(e=>`<tr><td class="mono">${fmtDate(e.date)}</td><td>${esc(e.source||"Practice exam")}</td><td class="mono">${e.score}%${e.score>=80?' <span class="pill done">Pass</span>':""}</td>
+      <td><button class="del ${awsArmed===e.id?"armed":""}" data-aws-del="${esc(e.id)}">${awsArmed===e.id?"Tap again to delete":"Delete"}</button></td></tr>`).join("")}
+    </tbody></table></div>` : ""}
+  </div>`;
+}
+
+function weekStats(from, to){
+  const today = todayKey(); let planned=0, done=0, won=0, dsa=0, focus=0, kept=0;
+  for (let k=from; k<=to && k<=today; k=addDays(k,1)){
+    const req = requirements(k); const d = dayOf(k);
+    planned += req.length;
+    done += req.filter(r => r.kind==="count" ? (d.dsa||0)>=r.target : r.kind==="apps" ? appsOn(k)>=r.target : !!(d.done&&d.done[r.key])).length;
+    if (progressOf(k).won) won++;
+    dsa += d.dsa||0; focus += d.focus||0;
+    if (d.commitDone===true) kept++;
+  }
+  const apps = allApps().filter(a=>a.date>=from && a.date<=to).length;
+  return { planned, done, won, dsa, kept, focus: Math.round(focus/6)/10, apps, rate: planned ? Math.round(done/planned*100) : 0 };
+}
+function renderReport(){
+  const t = todayKey(); const ws = addDays(t, -((parseKey(t).getDay()+6)%7)); const we = addDays(ws,6);
+  const cur = weekStats(ws, we), prev = weekStats(addDays(ws,-7), addDays(ws,-1));
+  const row = (label, a, b, unit="") => { const d = Math.round((a-b)*10)/10; const cls = d>0?"up":d<0?"down":"same";
+    return `<div class="stat"><b>${a}${unit}</b><span>${label}</span><div class="delta ${cls}">${d>0?"▲ "+d:d<0?"▼ "+Math.abs(d):"same as"} last week (${b}${unit})</div></div>`; };
+  const v = cur.rate - prev.rate; const vcls = v>0?"up":v<0?"down":"same";
+  const verdict = cur.planned===0 ? "The week starts Monday. Plan it in your Sunday review."
+    : v>0 ? `Better than last week: ${cur.rate}% of blocks done, up from ${prev.rate}%.` : v<0 ? `Slipping: ${cur.rate}% of blocks done, down from ${prev.rate}%. Pick one block to protect tomorrow.` : `Holding steady at ${cur.rate}% of blocks done.`;
+  const due = TASKS.filter(x=>x.due>=ws && x.due<=we);
+  $("#tabpanel").innerHTML = `
+  <div class="panel">
+    <div class="panel-head"><h2>Week of ${fmtDate(ws)}</h2><span class="muted" style="font-size:13px">${fmtDate(ws)} to ${fmtDate(we)} · compared with last week</span></div>
+    <div class="verdict ${vcls}">${esc(verdict)}</div>
+    <div class="report">
+      ${row("blocks done (%)", cur.rate, prev.rate, "%")}
+      ${row("days won", cur.won, prev.won)}
+      ${row("applications (goal 35)", cur.apps, prev.apps)}
+      ${row("problems solved", cur.dsa, prev.dsa)}
+      ${row("focused hours", cur.focus, prev.focus, "h")}
+      ${row("promises kept", cur.kept, prev.kept)}
+    </div>
+    <h3>Roadmap tasks due this week</h3>
+    ${due.length ? due.map(x=>`<label class="task ${S.tasks[x.id]?"is-done":""} ${!S.tasks[x.id]&&x.due<t?"late":""}"><input type="checkbox" data-task="${x.id}" ${S.tasks[x.id]?"checked":""}><span>${esc(x.text)}</span><span class="due mono">${fmtDate(x.due)}</span></label>`).join("") : `<p class="muted">Nothing due this week. Get ahead on next week's tasks.</p>`}
+  </div>`;
+}
+
+function renderBadges(){
+  const L = levelOf(xp()); const bs = badgeList(); const got = bs.filter(b=>b.got).length;
+  $("#tabpanel").innerHTML = `
+  <div class="panel">
+    <div class="panel-head"><h2>Level ${L.lvl} · ${L.name}</h2><span class="mono">${got}/${bs.length} badges</span></div>
+    <div class="level"><div class="bar"><i style="width:${Math.round(L.into/L.need*100)}%"></i></div><span class="mono muted" style="font-size:12.5px">${L.need-L.into} XP to level ${L.lvl+1}</span></div>
+    <p class="muted" style="font-size:13px;margin:0">XP: problem 10 · application 5 · focused minute 1 · roadmap task 25 · day won 20 · practice exam 15</p>
+    <div class="badges">${bs.map(b=>`<div class="badge ${b.got?"got":"locked"}"><div class="medal" aria-hidden="true">${esc(b.name.replace(/[^A-Za-z0-9]/g,"").slice(0,2).toUpperCase())}</div><b>${esc(b.name)}</b><span>${b.got?"Unlocked":esc(b.how)}</span></div>`).join("")}</div>
+  </div>`;
+}
+
+function renderNotes(){
+  const t = todayKey(); const d = dayOf(t);
+  const past = Object.keys(S.days).filter(k=>k<t && S.days[k].note).sort().reverse().slice(0,7);
+  $("#tabpanel").innerHTML = `
+  <div class="panel">
+    <h2>One line about today</h2>
+    <label for="note" class="muted" style="font-size:13.5px">What got in the way, or what worked? Honest notes beat motivation.</label>
+    <textarea id="note" placeholder="e.g. Phone during DSA block. Tomorrow it stays in the other room.">${esc(d.note||"")}</textarea>
+    <div><button class="btn small" id="savenote">Save note</button></div>
+    ${past.length?`<h3>Recent notes</h3>${past.map(k=>`<div><span class="mono muted">${fmtDate(k)}</span> ${esc(S.days[k].note)}</div>`).join("")}`:""}
+  </div>`;
+}
+
+function render(){
+  const ae = document.activeElement;
+  renderHeader();
+  if (!(ae && ae.id==="promise-in")) renderNow();
+  renderChecklist(); renderMomentum();
+  if (!(ae && $("#tabpanel").contains(ae) && ["INPUT","TEXTAREA"].includes(ae.tagName))) renderTabs();
+  checkBadges();
+}
+
+/* ---------- focus timer ---------- */
+const FKEY = "comeback-focus";
+let F = null, fTimer = null;
+try { F = JSON.parse(localStorage.getItem(FKEY)||"null"); } catch(e){}
+const labelFor = key => (blocksFor(todayKey()).find(b=>b.key===key)||{}).label || ({dsa:"DSA",apps:"Applications",aws:"AWS study",project:"Project",review:"Weekly review"}[key]);
+function startFocus(key, min){
+  F = {key, min:Number(min), endsAt: Date.now()+min*60000, pausedLeft:null, day: todayKey()};
+  try{ localStorage.setItem(FKEY, JSON.stringify(F)); }catch(e){}
+  showFocus();
+}
+function stopFocus(credit){
+  if (F && credit){
+    const usedMin = Math.round((F.min*60000 - Math.max(0,(F.pausedLeft ?? (F.endsAt-Date.now()))))/60000);
+    if (usedMin>0){ const d = clone(dayOf(F.day)); d.focus = (d.focus||0)+usedMin; saveDay(F.day, d); }
+  }
+  F = null; try{ localStorage.removeItem(FKEY); }catch(e){}
+  clearInterval(fTimer); $("#focus").hidden = true; document.title = "Study Scheduler";
+}
+function showFocus(){
+  const el = $("#focus"); el.hidden = false; clearInterval(fTimer);
+  const draw = () => {
+    if (!F) return;
+    const left = F.pausedLeft ?? Math.max(0, F.endsAt - Date.now());
+    const mm = Math.floor(left/60000), ss = Math.floor(left%60000/1000);
+    if (left <= 0) { finishFocus(); return; }
+    el.innerHTML = `<div class="eyebrow" style="color:inherit;opacity:.7">Focus block · phone in another room</div>
+      <div class="task-name">${esc(labelFor(F.key))}</div>
+      <div class="clock" role="timer">${pad(mm)}:${pad(ss)}</div>
+      <div class="rule">${esc(WHY[F.key]||"")}</div>
+      <div class="row"><button class="btn ghost" id="f-pause">${F.pausedLeft!=null?"Resume":"Pause"}</button>
+      <button class="btn ghost" id="f-quit">Stop and log the time</button></div>`;
+    document.title = pad(mm)+":"+pad(ss)+" · "+labelFor(F.key);
+  };
+  draw(); fTimer = setInterval(draw, 1000);
+}
+function finishFocus(){
+  clearInterval(fTimer);
+  const key = F.key, k = F.day;
+  const d = clone(dayOf(k)); d.focus = (d.focus||0) + F.min; saveDay(k, d);
+  F = null; try{ localStorage.removeItem(FKEY); }catch(e){}
+  document.title = "Study Scheduler";
+  const act = key==="dsa" ? `<button class="btn big" id="f-dsa">I solved one: +1 problem</button>`
+            : key==="apps" ? `<button class="btn big" id="f-apps">Log my applications</button>`
+            : `<button class="btn big" id="f-mark" data-key="${key}">Mark ${esc(labelFor(key))} done</button>`;
+  $("#focus").innerHTML = `<div class="task-name">Block finished</div><div class="rule">That counted. Log what you did while it's fresh.</div>
+    <div class="row">${act}<button class="btn ghost" id="f-close">Close</button></div>`;
+}
+
+/* ---------- events ---------- */
+document.addEventListener("click", e => {
+  const b = e.target.closest("button, [data-task]"); if (!b) return;
+  const t = todayKey();
+  if (b.id==="export"){ exportBackup(); return; }
+  if (b.id==="import"){ $("#importfile").click(); return; }
+  if (b.id==="signin"){ signInWithPopup(auth, new GoogleAuthProvider()).catch(err => { $("#gate-msg").textContent = "Sign-in didn't finish (" + (err.code||"error") + "). Try again."; }); return; }
+  if (b.id==="signout"){ signOut(auth); return; }
+  if (b.dataset.start){ startFocus(b.dataset.start, b.dataset.min||25); return; }
+  if (b.dataset.freeze){ const d = clone(dayOf(b.dataset.freeze)); d.frozen = true; saveDay(b.dataset.freeze, d); toast("Streak saved with a freeze."); return; }
+  if (b.dataset.rescue){ const d = clone(dayOf(t)); d.rescue = {...(d.rescue||{}), [b.dataset.rescue]: b.dataset.at}; saveDay(t,d); toast(`Moved to ${fmt12(b.dataset.at)}. Show up for it.`); return; }
+  if (b.dataset.commit){ const d = clone(dayOf(t)); d.commitDone = b.dataset.commit==="yes"; saveDay(t,d); toast(d.commitDone ? "Promise kept." : "Logged. Make tomorrow's promise smaller."); return; }
+  if (b.dataset.view){ appView = b.dataset.view; try{localStorage.setItem("comeback-appview",appView);}catch(e){} renderApps(); return; }
+  if (b.dataset.move){ if (b.dataset.to) setStatus(b.dataset.move, b.dataset.to); return; }
+  if (b.dataset.awsDel){
+    if (awsArmed !== b.dataset.awsDel){ awsArmed = b.dataset.awsDel; renderAws(); return; }
+    S.aws = S.aws.filter(e=>e.id!==b.dataset.awsDel); awsArmed = null; saveAws(); toast("Score deleted."); return;
+  }
+  if (b.dataset.jobApply){
+    const j = openJobs().find(x=>x.id===b.dataset.jobApply); if (!j) return;
+    const month = t.slice(0,7);
+    const entry = { id:"a"+Date.now().toString(36)+Math.random().toString(36).slice(2,6), date:t, created:Date.now(), company:j.company, role:j.title,
+      tier:"Dream", resume: /machine learning|\bml\b|\bai\b|research|scientist|data/i.test(j.title) ? "AIML" : "SDE", link:j.url, status:"Applied", note:j.location };
+    S.apps[month] = [...(S.apps[month]||[]), entry]; saveApps(month);
+    S.jobstate = {...S.jobstate, [j.id]:"applied"}; saveJobState();
+    const n = appsOn(t); toast(n>=5 ? "Logged. 5 today: applications done." : `Logged. ${n} of 5 today.`); return;
+  }
+  if (b.dataset.jobSkip){ S.jobstate = {...S.jobstate, [b.dataset.jobSkip]:"dismissed"}; saveJobState(); return; }
+  if (b.hasAttribute("data-loadmail")){ loadJobsFile(true); return; }
+  if (b.hasAttribute("data-jobs-all")){ showAllJobs = !showAllJobs; renderApps(); return; }
+  if (b.dataset.toggle){ const d = clone(dayOf(t)); d.done = d.done||{}; d.done[b.dataset.toggle] = !d.done[b.dataset.toggle]; saveDay(t,d); if (d.done[b.dataset.toggle]) toast("Ticked. Keep the chain going."); return; }
+  if (b.dataset.dsa){ const d = clone(dayOf(t)); d.dsa = Math.max(0,(d.dsa||0)+Number(b.dataset.dsa)); saveDay(t,d); return; }
+  if (b.hasAttribute("data-dsa-tick")){ const d = clone(dayOf(t)); d.dsa = (d.dsa||0)+1; saveDay(t,d); return; }
+  if (b.dataset.goto){ tab = b.dataset.goto; try{localStorage.setItem("comeback-tab",tab);}catch(e){} renderTabs(); $("#tabpanel").scrollIntoView({behavior:"smooth",block:"start"}); setTimeout(()=>{ const f=$("#f-co"); f&&f.focus(); },300); return; }
+  if (b.dataset.tab){ tab = b.dataset.tab; try{localStorage.setItem("comeback-tab",tab);}catch(e){} renderTabs(); return; }
+  if (b.dataset.del){
+    if (armedDelete !== b.dataset.del){ armedDelete = b.dataset.del; renderApps(); return; }
+    for (const m in S.apps){ const i = S.apps[m].findIndex(a=>a.id===b.dataset.del); if (i>=0){ S.apps[m] = S.apps[m].filter(a=>a.id!==b.dataset.del); armedDelete=null; saveApps(m); toast("Application deleted."); break; } }
+    return;
+  }
+  if (b.id==="savenote"){ const d = clone(dayOf(t)); d.note = $("#note").value.trim(); saveDay(t,d); toast("Note saved."); return; }
+  if (b.id==="f-pause"){ if (F.pausedLeft!=null){ F.endsAt = Date.now()+F.pausedLeft; F.pausedLeft=null; } else { F.pausedLeft = Math.max(0,F.endsAt-Date.now()); } try{localStorage.setItem(FKEY,JSON.stringify(F));}catch(e){} return; }
+  if (b.id==="f-quit"){ stopFocus(true); toast("Time logged. Start again when you're ready."); return; }
+  if (b.id==="f-close"){ $("#focus").hidden = true; return; }
+  if (b.id==="f-dsa"){ const d = clone(dayOf(t)); d.dsa=(d.dsa||0)+1; saveDay(t,d); $("#focus").hidden=true; toast("+1 problem."); return; }
+  if (b.id==="f-apps"){ $("#focus").hidden=true; tab="apps"; renderTabs(); $("#tabpanel").scrollIntoView({behavior:"smooth"}); return; }
+  if (b.id==="f-mark"){ const d = clone(dayOf(t)); d.done=d.done||{}; d.done[b.dataset.key]=true; saveDay(t,d); $("#focus").hidden=true; toast("Done. Next block."); return; }
+});
+document.addEventListener("change", e => {
+  const el = e.target;
+  if (el.id==="importfile"){ const f = el.files && el.files[0]; el.value = ""; if (f) importBackup(f); return; }
+  if (el.dataset.task){ if (el.checked) S.tasks[el.dataset.task] = todayKey(); else delete S.tasks[el.dataset.task]; saveTasks(); if (el.checked) toast("Roadmap task done."); return; }
+  if (el.dataset.status){ for (const m in S.apps){ const a = (S.apps[m]||[]).find(a=>a.id===el.dataset.status); if (a){ S.apps[m] = S.apps[m].map(x=>x.id===a.id?{...x,status:el.value}:x); saveApps(m); toast("Status updated."); break; } } }
+});
+document.addEventListener("submit", e => {
+  if (e.target.id === "awsform"){ e.preventDefault();
+    const sc = Number($("#aw-score").value.replace("%","").trim());
+    if (!(sc>=0 && sc<=100) || $("#aw-score").value.trim()===""){ toast("Enter a score between 0 and 100."); return; }
+    S.aws = [...S.aws, {id:"x"+Date.now().toString(36), date:$("#aw-date").value||todayKey(), score:Math.round(sc), source:$("#aw-src").value.trim(), created:Date.now()}];
+    saveAws(); toast(sc>=80 ? "Pass mark. Keep it there." : "Logged. Review every wrong answer."); return; }
+  if (e.target.id === "promiseform"){ e.preventDefault();
+    const v = $("#promise-in").value.trim(); if (!v) return; const t = todayKey(); const d = clone(dayOf(t));
+    d.commit = v; delete d.commitDone; $("#promise-in").blur(); saveDay(t,d); toast("Promised. Now start."); return; }
+  if (e.target.id !== "appform") return; e.preventDefault();
+  const date = $("#f-date").value || todayKey(); const month = date.slice(0,7);
+  const entry = { id: "a"+Date.now().toString(36)+Math.random().toString(36).slice(2,6), date, created: Date.now(),
+    company: $("#f-co").value.trim(), role: $("#f-role").value.trim(), tier: $("#f-tier").value, resume: $("#f-res").value,
+    link: $("#f-link").value.trim(), status: "Applied" };
+  if (!entry.company || !entry.role) return;
+  S.apps[month] = [...(S.apps[month]||[]), entry]; saveApps(month);
+  const n = appsOn(todayKey()); toast(n>=5 ? "5 today. Applications done." : `${n} of 5 today. ${5-n} to go.`);
+  setTimeout(()=>{ const f=$("#f-co"); f&&f.focus(); },50);
+});
+
+/* Pipeline board drag and drop (the arrow buttons do the same on phones). */
+document.addEventListener("dragstart", e => { const c = e.target.closest && e.target.closest("[data-card]"); if (c){ e.dataTransfer.setData("text/plain", c.dataset.card); e.dataTransfer.effectAllowed = "move"; } });
+document.addEventListener("dragover", e => { const col = e.target.closest && e.target.closest("[data-col]"); if (col){ e.preventDefault(); col.classList.add("over"); } });
+document.addEventListener("dragleave", e => { const col = e.target.closest && e.target.closest("[data-col]"); if (col && !col.contains(e.relatedTarget)) col.classList.remove("over"); });
+document.addEventListener("drop", e => { const col = e.target.closest && e.target.closest("[data-col]"); if (!col) return; e.preventDefault(); col.classList.remove("over");
+  const id = e.dataTransfer.getData("text/plain"); if (id) setStatus(id, col.dataset.col); });
+
+/* Re-render each minute so the NOW card follows the clock, and at midnight. */
+setInterval(()=>{ if (!(document.activeElement && ["INPUT","TEXTAREA","SELECT"].includes(document.activeElement.tagName))) render(); }, 60000);
+
+/* ---------- backup and restore ---------- */
+function exportBackup(){
+  const data = { exported: new Date().toISOString(), days:S.days, tasks:S.tasks, apps:S.apps, aws:S.aws, jobstate:S.jobstate };
+  const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 1)], {type:"application/json"}));
+  const a = document.createElement("a"); a.href = url; a.download = "study-scheduler-backup-" + todayKey() + ".json";
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url), 2000);
+  toast("Backup downloaded. Keep it somewhere safe.");
+}
+async function importBackup(file){
+  let j; try { j = JSON.parse(await file.text()); } catch(e){ toast("That file isn't a Study Scheduler backup."); return; }
+  if (!j || typeof j.days !== "object"){ toast("That file isn't a Study Scheduler backup."); return; }
+  S.days = j.days||{}; S.tasks = j.tasks||{}; S.apps = j.apps||{}; S.aws = j.aws||[]; S.jobstate = j.jobstate||{};
+  if (live){
+    const writes = [ ...Object.entries(S.days).map(([k,v]) => db.doc("days/"+k).set(v)),
+      db.doc("meta/tasks").set({done:S.tasks}), ...Object.entries(S.apps).map(([m,v]) => db.doc("apps/"+m).set({entries:v})),
+      db.doc("aws/exams").set({entries:S.aws}), db.doc("meta/jobstate").set({done:S.jobstate}) ];
+    try { await Promise.all(writes); } catch(e){ toast("Restore partly failed. Try again."); return; }
+  } else saveLocal();
+  render(); toast("Backup restored.");
+}
+
+/* ---------- boot ---------- */
+/* Each viewer's data lives under users/<their uid>/... ; the adapter keeps the app's short paths. */
+function makeDb(fs, uid){
+  const ref = p => { const s = p.split("/"); return s.length % 2 === 0 ? fdoc(fs, "users", uid, ...s) : fcol(fs, "users", uid, ...s); };
+  const wrap = d => ({ id: d.id, exists: d.exists(), data: () => d.data() });
+  return {
+    doc: p => { const r = ref(p); return { set: v => setDoc(r, v), onSnapshot: (n, e) => fsnap(r, s => n(wrap(s)), e) }; },
+    collection: p => { const r = ref(p); return { onSnapshot: (n, e) => fsnap(r, s => n({ docs: s.docs.map(wrap) }), e) }; },
+  };
+}
+const configured = firebaseConfig && firebaseConfig.apiKey && !/PASTE/.test(firebaseConfig.apiKey);
+let auth = null, unsubs = [];
+loadLocal(); render(); loadJobsFile(false);
+if (F) showFocus();
+if (!configured){
+  loaded = true;
+  $("#sync").textContent = "Setup not finished: data is saved in this browser only until Firebase is connected.";
+} else {
+  const app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  const fs = initializeFirestore(app, { localCache: persistentLocalCache() });
+  onAuthStateChanged(auth, user => {
+    unsubs.forEach(u => u()); unsubs = [];
+    if (!user){ live = false; $("#gate").hidden = false; $("#signout").hidden = true; return; }
+    if (ALLOWED_EMAIL && (user.email||"").toLowerCase() !== ALLOWED_EMAIL.toLowerCase()){
+      $("#gate-msg").textContent = "This Study Scheduler is private to its owner."; signOut(auth); return;
+    }
+    $("#gate").hidden = true; $("#signout").hidden = false;
+    db = makeDb(fs, user.uid); live = true; loaded = false;
+    S.days = {}; S.tasks = {}; S.apps = {}; S.aws = []; S.jobstate = {}; render();
+    const arrived = new Set(); const mark = name => { arrived.add(name); if (arrived.size >= 3) loaded = true; };
+    const fail = () => { $("#sync").textContent = "Lost connection to saved progress. Reload the page to reconnect."; };
+    unsubs.push(db.collection("days").onSnapshot(snap => { const o={}; snap.docs.forEach(d=>o[d.id]=d.data()); S.days=o; mark("days"); render(); $("#sync").textContent = "Signed in as " + user.email + ". Progress saved to your account."; }, fail));
+    unsubs.push(db.doc("meta/tasks").onSnapshot(snap => { S.tasks = snap.exists ? clone((snap.data()||{}).done) : {}; mark("tasks"); render(); }, fail));
+    unsubs.push(db.collection("apps").onSnapshot(snap => { const o={}; snap.docs.forEach(d=>o[d.id]=clone((d.data()||{}).entries||[])); S.apps=o; mark("apps"); render(); }, fail));
+    unsubs.push(db.doc("aws/exams").onSnapshot(snap => { S.aws = snap.exists ? clone((snap.data()||{}).entries||[]) : []; render(); }, () => {}));
+    unsubs.push(db.doc("meta/jobstate").onSnapshot(snap => { S.jobstate = snap.exists ? clone((snap.data()||{}).done) : {}; render(); }, () => {}));
+  });
+}
+</script>
+</body>
+</html>
