@@ -210,8 +210,8 @@ textarea{min-height:64px;resize:vertical}
 .seg button{background:none;border:0;padding:6px 12px;font-size:13px;font-weight:600;color:var(--muted)}
 .seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
-.gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:30;padding:max(16px,env(safe-area-inset-left,0px))}
-.gate .box{max-width:420px;display:flex;flex-direction:column;gap:14px;text-align:center;align-items:center}
+.signin{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:30;padding:max(16px,env(safe-area-inset-left,0px))}
+.signin .box{max-width:420px;display:flex;flex-direction:column;gap:14px;text-align:center;align-items:center}
 .foot{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 </style>
 </head>
@@ -252,7 +252,7 @@ textarea{min-height:64px;resize:vertical}
     <button class="btn small plain" id="signout" hidden>Sign out</button>
   </div>
 </div>
-<div class="gate" id="gate" hidden><div class="box">
+<div class="signin" id="gate" hidden><div class="box">
   <h1>Study Scheduler</h1>
   <p class="muted" id="gate-msg">Sign in to load your streaks, applications and progress.</p>
   <button class="btn big" id="signin">Sign in with Google</button>
