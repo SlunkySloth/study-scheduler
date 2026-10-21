@@ -268,77 +268,77 @@ import { initializeFirestore, persistentLocalCache, doc as fdoc, collection as f
 import { firebaseConfig, ALLOWED_EMAIL } from "./firebase-config.js";
 
 /* ---------- the plan (dates are from your roadmap doc) ---------- */
-const AWS_EXAM = "2026-12-15";
-const PLAN_START = "2026-10-19";
+const AWS_EXAM = "2026-12-17";
+const PLAN_START = "2026-10-21";
 
 const PHASES = [
-  {id:"p0", name:"Phase 0: Reset", start:"2026-10-19", end:"2026-10-25", gate:"Every resume line marked green, yellow or red"},
-  {id:"p1", name:"Phase 1: Own PyRaft", start:"2026-10-26", end:"2026-11-22", gate:"Explain leader election and log replication with no notes"},
-  {id:"aws", name:"AWS track: Solutions Architect Associate", start:"2026-10-19", end:"2026-12-15", gate:"80%+ on 3 timed practice exams, then pass on Dec 15"},
-  {id:"p2", name:"Phase 2: Flash-sale system", start:"2026-11-23", end:"2027-02-28", gate:"Published load test: 1M purchase attempts, zero oversold"},
-  {id:"p3", name:"Phase 3: ML layer", start:"2027-03-01", end:"2027-04-18", gate:"Bot model serves under 20 ms p99, with an evaluation report"},
-  {id:"p4", name:"Phase 4: Interview mode", start:"2027-04-19", end:"2027-05-30", gate:"Pass 2 mock interviews a week for 3 weeks"},
-  {id:"p5", name:"Phase 5: Summer and next cycle", start:"2027-05-31", end:"2027-10-31", gate:"One offer, or 3 merged open-source PRs and a fresh application wave in August"},
+  {id:"p0", name:"Phase 0: Reset", start:"2026-10-21", end:"2026-10-27", gate:"Every resume line marked green, yellow or red"},
+  {id:"p1", name:"Phase 1: Own PyRaft", start:"2026-10-28", end:"2026-11-24", gate:"Explain leader election and log replication with no notes"},
+  {id:"aws", name:"AWS track: Solutions Architect Associate", start:"2026-10-21", end:"2026-12-17", gate:"80%+ on 3 timed practice exams, then pass on Dec 17"},
+  {id:"p2", name:"Phase 2: Flash-sale system", start:"2026-11-25", end:"2027-03-02", gate:"Published load test: 1M purchase attempts, zero oversold"},
+  {id:"p3", name:"Phase 3: ML layer", start:"2027-03-03", end:"2027-04-20", gate:"Bot model serves under 20 ms p99, with an evaluation report"},
+  {id:"p4", name:"Phase 4: Interview mode", start:"2027-04-21", end:"2027-06-01", gate:"Pass 2 mock interviews a week for 3 weeks"},
+  {id:"p5", name:"Phase 5: Summer and next cycle", start:"2027-06-02", end:"2027-11-02", gate:"One offer, or 3 merged open-source PRs and a fresh application wave in August"},
 ];
 
 const TASKS = [
-  ["p0","Mark every resume line green, yellow or red","2026-10-25"],
-  ["p0","Fix the employer name (Caprea vs Caprae) and pick one email for applications","2026-10-25"],
-  ["p0","Start NeetCode 150 (Arrays and Hashing)","2026-10-25"],
-  ["p0","Unsubscribe from irrelevant job alerts","2026-10-25"],
-  ["p1","Read the Raft paper; draw the follower, candidate, leader state machine","2026-11-01"],
-  ["p1","Rewrite leader election by hand, with tests for split votes","2026-11-08"],
-  ["p1","Rewrite log replication and commit rules; test a node killed mid-write","2026-11-15"],
-  ["p1","Partition tests, README with a diagram, 5-minute recorded walkthrough","2026-11-22"],
-  ["aws","Set an AWS Budgets alert at $5","2026-10-19"],
-  ["aws","Confirm and book the Dec 15 exam slot","2026-11-01"],
-  ["aws","IAM, VPC (subnets, NAT, security groups), EC2, S3","2026-11-01"],
-  ["aws","RDS, DynamoDB, ElastiCache, load balancers, Auto Scaling, Route 53, CloudFront","2026-11-15"],
-  ["aws","SQS, SNS, Kinesis, Lambda, CloudWatch, KMS, Well-Architected, cost","2026-11-29"],
-  ["aws","Timed practice exams: 80%+ on 3 of them","2026-12-13"],
-  ["aws","Exam day","2026-12-15"],
-  ["p2","One-server version; buying a ticket is a database transaction (weekends until Dec 15)","2026-12-20"],
-  ["p2","k6 load test baseline: requests/sec, p99 latency, oversold count","2026-12-27"],
-  ["p2","Break it with race conditions, then fix it; prove zero oversold","2027-01-03"],
-  ["p2","Redis for stock and caching; idempotency keys","2027-01-17"],
-  ["p2","A queue (Redis Streams or Kafka) to absorb spikes","2027-01-24"],
-  ["p2","Token-bucket rate limiter per user and IP","2027-01-31"],
-  ["p2","3 stateless instances behind nginx, then deploy on AWS; tear down after tests","2027-02-07"],
-  ["p2","Prometheus + Grafana; rerun the load test at 1M attempts","2027-02-14"],
-  ["p2","Design write-up with before/after numbers; add to resume","2027-02-28"],
-  ["p3","Logistic regression and gradient descent in NumPy, no libraries","2027-03-14"],
-  ["p3","Generate labelled bot and human traffic logs from the flagship","2027-03-21"],
-  ["p3","Features and a baseline model; report precision and recall","2027-03-28"],
-  ["p3","Gradient-boosted model, compared honestly against the baseline","2027-04-04"],
-  ["p3","Serve it in the request path within 20 ms; load test again","2027-04-11"],
-  ["p3","Evaluation report: real buyers blocked versus bots caught","2027-04-18"],
-  ["p4","Start 2 mock interviews a week","2027-04-25"],
-  ["p4","System design: URL shortener, rate limiter, news feed","2027-05-16"],
-  ["p4","ML interview basics: bias/variance, metrics, A/B testing the bot model","2027-05-23"],
-  ["p4","6 behavioral stories in STAR format","2027-05-30"],
-  ["p5","With an internship: ship something measurable, ask for a return offer","2027-08-15"],
-  ["p5","Without one: 3 merged open-source PRs plus off-cycle applications","2027-08-15"],
-  ["p5","Apply to Summer 2028 and new-grad roles in the first two weeks of August","2027-08-15"],
+  ["p0","Mark every resume line green, yellow or red","2026-10-27"],
+  ["p0","Fix the employer name (Caprea vs Caprae) and pick one email for applications","2026-10-27"],
+  ["p0","Start NeetCode 150 (Arrays and Hashing)","2026-10-27"],
+  ["p0","Unsubscribe from irrelevant job alerts","2026-10-27"],
+  ["p1","Read the Raft paper; draw the follower, candidate, leader state machine","2026-11-03"],
+  ["p1","Rewrite leader election by hand, with tests for split votes","2026-11-10"],
+  ["p1","Rewrite log replication and commit rules; test a node killed mid-write","2026-11-17"],
+  ["p1","Partition tests, README with a diagram, 5-minute recorded walkthrough","2026-11-24"],
+  ["aws","Set an AWS Budgets alert at $5","2026-10-21"],
+  ["aws","Confirm and book the Dec 17 exam slot","2026-11-03"],
+  ["aws","IAM, VPC (subnets, NAT, security groups), EC2, S3","2026-11-03"],
+  ["aws","RDS, DynamoDB, ElastiCache, load balancers, Auto Scaling, Route 53, CloudFront","2026-11-17"],
+  ["aws","SQS, SNS, Kinesis, Lambda, CloudWatch, KMS, Well-Architected, cost","2026-12-01"],
+  ["aws","Timed practice exams: 80%+ on 3 of them","2026-12-15"],
+  ["aws","Exam day","2026-12-17"],
+  ["p2","One-server version; buying a ticket is a database transaction (weekends until Dec 17)","2026-12-22"],
+  ["p2","k6 load test baseline: requests/sec, p99 latency, oversold count","2026-12-29"],
+  ["p2","Break it with race conditions, then fix it; prove zero oversold","2027-01-05"],
+  ["p2","Redis for stock and caching; idempotency keys","2027-01-19"],
+  ["p2","A queue (Redis Streams or Kafka) to absorb spikes","2027-01-26"],
+  ["p2","Token-bucket rate limiter per user and IP","2027-02-02"],
+  ["p2","3 stateless instances behind nginx, then deploy on AWS; tear down after tests","2027-02-09"],
+  ["p2","Prometheus + Grafana; rerun the load test at 1M attempts","2027-02-16"],
+  ["p2","Design write-up with before/after numbers; add to resume","2027-03-02"],
+  ["p3","Logistic regression and gradient descent in NumPy, no libraries","2027-03-16"],
+  ["p3","Generate labelled bot and human traffic logs from the flagship","2027-03-23"],
+  ["p3","Features and a baseline model; report precision and recall","2027-03-30"],
+  ["p3","Gradient-boosted model, compared honestly against the baseline","2027-04-06"],
+  ["p3","Serve it in the request path within 20 ms; load test again","2027-04-13"],
+  ["p3","Evaluation report: real buyers blocked versus bots caught","2027-04-20"],
+  ["p4","Start 2 mock interviews a week","2027-04-27"],
+  ["p4","System design: URL shortener, rate limiter, news feed","2027-05-18"],
+  ["p4","ML interview basics: bias/variance, metrics, A/B testing the bot model","2027-05-25"],
+  ["p4","6 behavioral stories in STAR format","2027-06-01"],
+  ["p5","With an internship: ship something measurable, ask for a return offer","2027-08-17"],
+  ["p5","Without one: 3 merged open-source PRs plus off-cycle applications","2027-08-17"],
+  ["p5","Apply to Summer 2028 and new-grad roles in the first two weeks of August","2027-08-17"],
 ].map(([phase,text,due],i)=>({id:"t"+i, phase, text, due}));
 
 const DATES = [
-  ["2026-10-19","Plan starts: Phase 0 and the AWS track","start"],
-  ["2026-10-25","Gate: resume audit done","gate"],
-  ["2026-10-26","Phase 1 starts: own PyRaft","start"],
-  ["2026-11-01","AWS exam slot booked","aws"],
-  ["2026-11-15","AWS: databases and scaling covered","aws"],
-  ["2026-11-22","Gate: explain Raft with no notes","gate"],
-  ["2026-11-23","Phase 2 starts (weekends only until the exam)","start"],
-  ["2026-11-29","AWS: messaging, Lambda and monitoring covered","aws"],
-  ["2026-12-13","AWS: 80%+ on 3 practice exams","aws"],
-  ["2026-12-15","AWS Solutions Architect Associate exam","aws"],
-  ["2026-12-20","Flagship weeks 1-2 done","gate"],
-  ["2027-02-28","Gate: flagship load test published","gate"],
-  ["2027-03-01","Phase 3 starts: ML layer","start"],
-  ["2027-04-18","Gate: bot model under 20 ms p99","gate"],
-  ["2027-04-19","Phase 4 starts: interview mode","start"],
-  ["2027-05-30","Gate: mock interviews passed","gate"],
-  ["2027-05-31","Phase 5: summer and next cycle","start"],
+  ["2026-10-21","Plan starts: Phase 0 and the AWS track","start"],
+  ["2026-10-27","Gate: resume audit done","gate"],
+  ["2026-10-28","Phase 1 starts: own PyRaft","start"],
+  ["2026-11-03","AWS exam slot booked","aws"],
+  ["2026-11-17","AWS: databases and scaling covered","aws"],
+  ["2026-11-24","Gate: explain Raft with no notes","gate"],
+  ["2026-11-25","Phase 2 starts (weekends only until the exam)","start"],
+  ["2026-12-01","AWS: messaging, Lambda and monitoring covered","aws"],
+  ["2026-12-15","AWS: 80%+ on 3 practice exams","aws"],
+  ["2026-12-17","AWS Solutions Architect Associate exam","aws"],
+  ["2026-12-22","Flagship weeks 1-2 done","gate"],
+  ["2027-03-02","Gate: flagship load test published","gate"],
+  ["2027-03-03","Phase 3 starts: ML layer","start"],
+  ["2027-04-20","Gate: bot model under 20 ms p99","gate"],
+  ["2027-04-21","Phase 4 starts: interview mode","start"],
+  ["2027-06-01","Gate: mock interviews passed","gate"],
+  ["2027-06-02","Phase 5: summer and next cycle","start"],
   ["2027-08-01","Summer 2028 and new-grad applications open","apply"],
 ];
 
@@ -689,7 +689,7 @@ function renderRoadmap(){
 function renderSchedule(){
   const t = todayKey(); const now = new Date(); const m = now.getHours()*60+now.getMinutes();
   const today = effBlocks(t);
-  const mode = t <= AWS_EXAM ? "Until the AWS exam (Dec 15)" : "After the AWS exam";
+  const mode = t <= AWS_EXAM ? "Until the AWS exam (Dec 17)" : "After the AWS exam";
   const sample = t <= AWS_EXAM ? "2026-12-07" : "2027-01-04";
   const rowsFor = (label, k) => blocksFor(k).map(b=>`<tr><td>${label}</td><td class="mono">${fmt12(b.start)} to ${fmt12(b.end)}</td><td>${esc(b.label)}</td></tr>`).join("");
   const nextIdx = DATES.findIndex(d=>d[0]>=t);
@@ -797,7 +797,7 @@ let awsArmed = null;
 function renderAws(){
   const t = todayKey(); const ex = [...S.aws].sort((a,b)=>a.date.localeCompare(b.date) || (a.created||0)-(b.created||0));
   const passing = ex.filter(e=>e.score>=80).length; const left = daysBetween(t, AWS_EXAM);
-  let chart = `<p class="muted">No practice exams yet. Timed practice starts Nov 30; log every attempt here, even bad ones.</p>`;
+  let chart = `<p class="muted">No practice exams yet. Timed practice starts Dec 2; log every attempt here, even bad ones.</p>`;
   if (ex.length){
     const W=640, H=240, L=40, R=16, T=16, B=30;
     const x0 = [ex[0].date, PLAN_START].sort()[0], x1 = [ex[ex.length-1].date, AWS_EXAM].sort().reverse()[0];
